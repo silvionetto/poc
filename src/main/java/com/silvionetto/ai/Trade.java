@@ -1,7 +1,7 @@
 package com.silvionetto.ai;
 
 public record Trade(
-        int tradeId,
+        String tradeId,
         String simbol,
         double quantity,
         double price,

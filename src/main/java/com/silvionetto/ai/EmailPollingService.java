@@ -3,6 +3,7 @@ package com.silvionetto.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
+import com.google.gson.Gson;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -12,12 +13,12 @@ import java.util.*;
 public class EmailPollingService {
 
     private final GmailService gmailService;
-    private final EmailSummarizer emailSummarizer;
+    private final TradeExtractor tradeExtractor;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public EmailPollingService(GmailService gmailService, EmailSummarizer emailSummarizer) {
+    public EmailPollingService(GmailService gmailService, TradeExtractor tradeExtractor) {
         this.gmailService = gmailService;
-        this.emailSummarizer = emailSummarizer;
+        this.tradeExtractor = tradeExtractor;
     }
 
     @Scheduled(fixedRate = 60000) // every 1 minute
@@ -39,13 +40,27 @@ public class EmailPollingService {
                         .execute();
 
                 Map<String, Object> json = extractJson(full);
+                //System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json));
 
-                System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json));
+                String tradeMessage = map2String(json);
+                Trade trade = tradeExtractor.extractTrade(tradeMessage);
+                if (trade != null) {
+                    System.out.println(trade);
+                    System.out.println("Trade created!");
+                } else {
+                    System.out.println("No trade found!");
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private String map2String(Map<String, Object> json) {
+        Gson gson = new Gson();
+        String jsonString = gson.toJson(json);
+        return jsonString;
     }
 
     private Map<String, Object> extractJson(Message message) {
@@ -66,9 +81,14 @@ public class EmailPollingService {
         json.put("from", from);
 
         String body = extractBody(message.getPayload());
-        json.put("body", emailSummarizer.summarize(body));
+        body = cleanBody(body);
+        json.put("body", body);
 
         return json;
+    }
+
+    private String cleanBody(String body) {
+        return body.replaceAll("[^a-zA-Z0-9 ]", "");
     }
 
     private String extractBody(MessagePart part) {
