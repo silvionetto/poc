@@ -38,3 +38,5 @@ out/
 
 ### My App ###
 .env
+/tokens/
+/src/main/resources/credentials.json
