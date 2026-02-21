@@ -12,10 +12,12 @@ import java.util.*;
 public class EmailPollingService {
 
     private final GmailService gmailService;
+    private final EmailSummarizer emailSummarizer;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public EmailPollingService(GmailService gmailService) {
+    public EmailPollingService(GmailService gmailService, EmailSummarizer emailSummarizer) {
         this.gmailService = gmailService;
+        this.emailSummarizer = emailSummarizer;
     }
 
     @Scheduled(fixedRate = 60000) // every 1 minute
@@ -64,7 +66,7 @@ public class EmailPollingService {
         json.put("from", from);
 
         String body = extractBody(message.getPayload());
-        json.put("body", body);
+        json.put("body", emailSummarizer.summarize(body));
 
         return json;
     }
