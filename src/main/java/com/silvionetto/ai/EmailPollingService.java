@@ -50,6 +50,8 @@ public class EmailPollingService {
                 logger.debug("Extracted Email JSON: {}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json));
 
                 String summary = emailSummarizer.summarize(json.get("body").toString());
+                logger.debug("Summary: {}", summary);
+
                 String isTrade = tradeRecognizer.analyse(summary);
                 if (isTrade.equalsIgnoreCase("Yes")) {
                     String tradeMessage = mapper.writeValueAsString(json);
