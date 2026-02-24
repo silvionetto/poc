@@ -3,22 +3,29 @@ package com.silvionetto.ai;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
-import com.google.gson.Gson;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 @Service
 public class EmailPollingService {
 
+    private static final Logger logger = LoggerFactory.getLogger(EmailPollingService.class);
     private final GmailService gmailService;
+    private final EmailSummarizer emailSummarizer;
+    private final TradeRecognizer tradeRecognizer;
     private final TradeExtractor tradeExtractor;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public EmailPollingService(GmailService gmailService, TradeExtractor tradeExtractor) {
+    public EmailPollingService(GmailService gmailService, TradeExtractor tradeExtractor,
+                               EmailSummarizer emailSummarizer, TradeRecognizer tradeRecognizer) {
         this.gmailService = gmailService;
         this.tradeExtractor = tradeExtractor;
+        this.emailSummarizer = emailSummarizer;
+        this.tradeRecognizer = tradeRecognizer;
     }
 
     @Scheduled(fixedRate = 60000) // every 1 minute
@@ -40,27 +47,22 @@ public class EmailPollingService {
                         .execute();
 
                 Map<String, Object> json = extractJson(full);
-                //System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json));
+                logger.debug("Extracted Email JSON: {}", mapper.writerWithDefaultPrettyPrinter().writeValueAsString(json));
 
-                String tradeMessage = map2String(json);
-                Trade trade = tradeExtractor.extractTrade(tradeMessage);
-                if (trade != null && trade.quantity() > 0) {
-                    System.out.println(trade);
-                    System.out.println("Trade created!");
+                String summary = emailSummarizer.summarize(json.get("body").toString());
+                String isTrade = tradeRecognizer.analyse(summary);
+                if (isTrade.equalsIgnoreCase("Yes")) {
+                    String tradeMessage = mapper.writeValueAsString(json);
+                    Trade trade = tradeExtractor.extractTrade(tradeMessage);
+                    logger.info("Trade created: {}", trade);
                 } else {
-                    System.out.println("No trade found!");
+                    logger.info("No trade found for message ID: {}", msg.getId());
                 }
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error occurred while polling emails", e);
         }
-    }
-
-    private String map2String(Map<String, Object> json) {
-        Gson gson = new Gson();
-        String jsonString = gson.toJson(json);
-        return jsonString;
     }
 
     private Map<String, Object> extractJson(Message message) {
@@ -88,7 +90,7 @@ public class EmailPollingService {
     }
 
     private String cleanBody(String body) {
-        return body.replaceAll("[^a-zA-Z0-9 ]", "");
+        return body.replaceAll("[^a-zA-Z0-9\\s.,:]", "");
     }
 
     private String extractBody(MessagePart part) {
