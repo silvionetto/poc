@@ -44,7 +44,7 @@ public class EmailPollingService {
 
                 String tradeMessage = map2String(json);
                 Trade trade = tradeExtractor.extractTrade(tradeMessage);
-                if (trade != null) {
+                if (trade != null && trade.quantity() > 0) {
                     System.out.println(trade);
                     System.out.println("Trade created!");
                 } else {
