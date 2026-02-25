@@ -5,6 +5,7 @@ public record Trade(
         String simbol,
         double quantity,
         double price,
+        String currency,
         String side,
         String sourceEmail) {
 }

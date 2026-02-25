@@ -26,8 +26,11 @@ public class TradeExtractor {
                 If the value is not in the text, do not add to the trade.
                 Do not guess any value.
                 RULES:
-                The simbol is the name of the company/security/stock market.
+                The "simbol" is the name of the stock market of the trade.
+                The "simbol" is also known as "Security" or "Share".
                 The price is the maximum or minimum value of the trade.
+                The currency is normally after the price.
+                Give the currency in ISO code.
                 Side only can by "Buy" or "Sell".
                 The "sourceEmail" field should be filled with the field "from" from the email.
                 The "sourceEmail" should be only the value inside < > not the full name.
